@@ -60,7 +60,7 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-habitpassword}
       JWT_SECRET: ${JWT_SECRET:-habit_jwt_secret}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:${FRONTEND_PORT:-3000}}
     ports:
       - "${BACKEND_PORT:-4000}:4000"
     networks:

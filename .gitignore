@@ -31,3 +31,4 @@ mysql_data/
 
 # Frontend
 /frontend/yarn.lock
+/frontend/package-lock.json
