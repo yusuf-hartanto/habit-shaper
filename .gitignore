@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build artifacts
+dist/
+build/
+**/dist/
+**/build/
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+
+# IDE & OS
+.DS_Store
+.idea/
+.vscode/
+*.log
+npm-debug.log*
+
+# Docker volumes local data (if mapped locally)
+mysql_data/
