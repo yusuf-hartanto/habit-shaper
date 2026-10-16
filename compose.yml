@@ -1,0 +1,89 @@
+name: habit-shaper
+
+services:
+  # ---------------------------------------------------------------------------
+  # Database: MySQL 8.0
+  # The `habit_shaper` database (and app user) is created automatically on first
+  # boot via MYSQL_* env vars. Tables are created by Sequelize migrations, which
+  # the backend runs on startup once this service reports healthy.
+  # ---------------------------------------------------------------------------
+  db:
+    image: mysql:8.0
+    container_name: habit-shaper-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-habit_shaper}
+      MYSQL_USER: ${DB_USER:-habituser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-habitpassword}
+      TZ: UTC
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+00:00
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      # Force TCP (-h 127.0.0.1) so the check does not pass against the temporary
+      # socket-only server MySQL runs while initializing the database.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks:
+      - habit-shaper-net
+
+  # ---------------------------------------------------------------------------
+  # Backend: Node.js + Express + TypeScript + Sequelize
+  # Entrypoint runs `npx sequelize-cli db:migrate` before starting the server.
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: habit-shaper-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 4000
+      TZ: UTC
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-habit_shaper}
+      DB_USER: ${DB_USER:-habituser}
+      DB_PASSWORD: ${DB_PASSWORD:-habitpassword}
+      JWT_SECRET: ${JWT_SECRET:-habit_jwt_secret}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    networks:
+      - habit-shaper-net
+
+  # ---------------------------------------------------------------------------
+  # Frontend: React (Vite) built and served by Nginx.
+  # Nginx proxies /api/* to http://backend:4000/api/*.
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: habit-shaper-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    networks:
+      - habit-shaper-net
+
+volumes:
+  mysql_data:
+
+networks:
+  habit-shaper-net:
+    driver: bridge
