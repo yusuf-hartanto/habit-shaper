@@ -25,3 +25,9 @@ npm-debug.log*
 
 # Docker volumes local data (if mapped locally)
 mysql_data/
+
+# Backend
+/backend/package-lock.json
+
+# Frontend
+/frontend/yarn.lock

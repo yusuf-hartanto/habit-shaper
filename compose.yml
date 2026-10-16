@@ -23,6 +23,8 @@ services:
       - --default-time-zone=+00:00
     volumes:
       - mysql_data:/var/lib/mysql
+    ports:
+      - "${DB_PORT:-3306}:3306"
     healthcheck:
       # Force TCP (-h 127.0.0.1) so the check does not pass against the temporary
       # socket-only server MySQL runs while initializing the database.
