@@ -4,6 +4,8 @@ import type { Server } from 'http';
 import { env } from './config/env';
 import { sequelize } from './models';
 import authRoutes from './routes/authRoutes';
+import habitRoutes from './routes/habitRoutes';
+import goalRoutes from './routes/goalRoutes';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler';
 
 const API_VERSION = '1.0.0';
@@ -47,6 +49,8 @@ app.get('/api/health', async (_req: Request, res: Response) => {
 
 // ---------- Feature routes ----------
 app.use('/api/auth', authRoutes);
+app.use('/api/habits', habitRoutes);
+app.use('/api/goals', goalRoutes);
 
 // ---------- Fallbacks ----------
 app.use(notFoundHandler);
