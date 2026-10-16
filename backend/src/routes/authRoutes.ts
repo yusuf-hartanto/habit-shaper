@@ -7,6 +7,7 @@ const router = Router();
 
 router.post('/register', asyncHandler(authController.register));
 router.post('/login', asyncHandler(authController.login));
+router.post('/reset-password', asyncHandler(authController.resetPassword));
 router.get('/me', authMiddleware, asyncHandler(authController.me));
 
 export default router;

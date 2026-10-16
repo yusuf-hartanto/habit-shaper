@@ -7,7 +7,9 @@ import type {
   AuthResponse,
   AuthTokenPayload,
   LoginPayload,
+  MessageResponse,
   RegisterPayload,
+  ResetPasswordPayload,
   UserProfile,
 } from '../types';
 
@@ -72,4 +74,25 @@ export const getProfile = async (userId: string): Promise<UserProfile> => {
     throw AppError.unauthorized('User no longer exists');
   }
   return toUserProfile(user);
+};
+
+/**
+ * Self-contained password reset (no email/SMTP step, per spec): sets a new
+ * password for the account identified by `email`.
+ */
+export const resetPassword = async ({
+  email,
+  newPassword,
+}: ResetPasswordPayload): Promise<MessageResponse> => {
+  const user = await User.findOne({ where: { email: normalizeEmail(email) } });
+  if (!user) {
+    throw AppError.notFound('No account found with that email address');
+  }
+
+  user.password_hash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  await user.save();
+
+  return {
+    message: 'Password has been reset successfully. You can now sign in with your new password.',
+  };
 };

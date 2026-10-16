@@ -30,6 +30,15 @@ export interface AuthResponse {
   user: UserProfile;
 }
 
+export interface ResetPasswordPayload {
+  email: string;
+  newPassword: string;
+}
+
+export interface MessageResponse {
+  message: string;
+}
+
 export interface ApiSuccess<T> {
   success: true;
   data: T;

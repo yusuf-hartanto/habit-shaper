@@ -28,7 +28,7 @@ api.interceptors.request.use((config) => {
 });
 
 // Clear the session when the server rejects our token.
-const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register'];
+const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/reset-password'];
 
 api.interceptors.response.use(
   (response) => response,

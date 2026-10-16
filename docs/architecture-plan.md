@@ -79,6 +79,7 @@ All tables use `UUID` (`CHAR(36)`, UUIDv4) as their primary key (`id`).
 - `POST /api/auth/register` — Register a new user account without email verification, set initial `last_login_at`, and return JWT.
 - `POST /api/auth/login` — Authenticate existing user, update `last_login_at`, and return JWT.
 - `GET /api/auth/me` — Get current logged-in user profile.
+- `POST /api/auth/reset-password` — Reset user password directly by email and new password (self-contained flow requiring no external email/SMTP server).
 
 ### Habits (`build` & `break`)
 - `GET /api/habits` — List all user habits enriched with calculated metrics:

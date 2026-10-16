@@ -8,6 +8,7 @@ import type {
   Habit,
   HabitFormValues,
   LoginPayload,
+  MessageResponse,
   RegisterPayload,
   ToggleResult,
   User,
@@ -19,6 +20,8 @@ export const authApi = {
   login: (payload: LoginPayload) =>
     unwrap(api.post<ApiSuccess<AuthResponse>>('/auth/login', payload)),
   me: () => unwrap(api.get<ApiSuccess<User>>('/auth/me')),
+  resetPassword: (email: string, newPassword: string) =>
+    unwrap(api.post<ApiSuccess<MessageResponse>>('/auth/reset-password', { email, newPassword })),
 };
 
 export const habitsApi = {

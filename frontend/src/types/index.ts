@@ -16,6 +16,10 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface MessageResponse {
+  message: string;
+}
+
 /** One day in the rolling 7-day window (UTC `YYYY-MM-DD`). */
 export interface DayStatus {
   date: string;
