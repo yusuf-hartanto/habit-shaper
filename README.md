@@ -22,7 +22,10 @@
 - **Stateless JWT authentication**: tokens are issued on register/login and sent as `Authorization: Bearer <token>`. Nothing is stored on the server, so one account can be signed in on several devices at once.
 - **Password hashing** with `bcryptjs`. Plain-text passwords are never stored.
 - **`last_login_at` audit tracking**, updated on every successful login.
-- **Self-contained Password Reset** (`POST /api/auth/reset-password`): a user resets their password with their email and a new password. No external SMTP server or email verification is needed.
+- **Production-grade Out-of-Band Password Reset (Mailpit + Nodemailer)**:
+  - `POST /api/auth/forgot-password`: Generates a cryptographically secure (`crypto.randomBytes(32)`), single-use token expiring in 15 minutes, stored as a SHA-256 hash in MySQL (`reset_password_token_hash`, `reset_password_expires_at`). Delivers the token and a direct reset link via SMTP to **Mailpit (`http://localhost:8025`)**. Crucially, the raw token is **never returned in the JSON response** and never auto-filled by the client.
+  - `POST /api/auth/reset-password`: Strictly requires `{ token, newPassword }` (minimum 6 characters), verifies the unexpired hash in a single query, updates `password_hash`, and immediately clears the token.
+- **Authenticated Password Change** (`PUT /api/auth/change-password`): Allows signed-in users to update their password directly from the top navigation bar after verifying their `currentPassword` with `bcrypt.compare`.
 
 ### Habit Building (`build`)
 - One-tap **daily check-in toggle** (defaults to today; also accepts a `YYYY-MM-DD` date).
@@ -51,25 +54,27 @@
 | **Frontend** | React 19, TypeScript, Vite, Tailwind CSS, Lucide Icons, Axios. Served by **Nginx**, which reverse-proxies `/api/*` to the backend container |
 | **Backend** | Node.js, Express, TypeScript, **Sequelize ORM** (`mysql2`), `jsonwebtoken`, `bcryptjs`. All primary/foreign keys are **UUIDv4 (`CHAR(36)`)**. Migrations run via `sequelize-cli` on container startup |
 | **Database** | **MySQL 8.0** (UTC, `utf8mb4`) with a readiness healthcheck |
+| **Email (Dev/SMTP)** | **Mailpit** (`axllent/mailpit`): local SMTP server on `1025` and webmail interface on `8025` |
 | **Infrastructure** | Docker Compose: multi-stage Dockerfiles, a private bridge network, and a named volume for MySQL data |
 
 ```text
-+-----------------------------------------------------------------------+
-|                            Docker Network                             |
-|                                                                       |
-|  +--------------------+     /api/*      +--------------------------+  |
-|  |  Frontend (Nginx)  | --------------> |  Backend (Node/Express)  |  |
-|  |  React + Tailwind  |                 |  TypeScript + Sequelize  |  |
-|  |  Port: 3000 -> 80  |                 |  Auto-runs Migrations    |  |
-|  +--------------------+                 +------------+-------------+  |
-|                                                      |                |
-|                                                      | TCP 3306       |
-|                                                      v                |
-|                                         +--------------------------+  |
-|                                         |   Database (MySQL 8.0)   |  |
-|                                         |   UUID Primary Keys      |  |
-|                                         +--------------------------+  |
-+-----------------------------------------------------------------------+
++-----------------------------------------------------------------------------------+
+|                                  Docker Network                                   |
+|                                                                                   |
+|  +--------------------+        /api/*         +--------------------------+        |
+|  |  Frontend (Nginx)  | --------------------> |  Backend (Node/Express)  |        |
+|  |  React + Tailwind  |                       |  TypeScript + Sequelize  |        |
+|  |  Port: 3000 -> 80  |                       |  Auto-runs Migrations    |        |
+|  +--------------------+                       +-------------+------------+        |
+|                                                             |                     |
+|                                           +-----------------+------------------+  |
+|                                           | TCP 3306        | SMTP 1025        |  |
+|                                           v                 v                  |  |
+|                              +--------------------------+  +-----------------+ |  |
+|                              |   Database (MySQL 8.0)   |  |     Mailpit     | |  |
+|                              |   UUID Primary Keys      |  |  Webmail: 8025  | |  |
+|                              +--------------------------+  +-----------------+ |  |
++-----------------------------------------------------------------------------------+
 ```
 
 **Startup sequence**
@@ -103,6 +108,7 @@ docker compose up --build
 | --- | --- |
 | Frontend web app | <http://localhost:3000> |
 | Backend API & healthcheck | <http://localhost:4000/api/health> |
+| Mailpit Webmail UI (captured emails) | <http://localhost:8025> |
 | MySQL (for GUI clients such as DBeaver) | `127.0.0.1:${DB_PORT}`, mapped to container port `3306` |
 
 > **MySQL host port:** the compose fallback is `3306`. If a MySQL server is already running on your machine, set `DB_PORT=3307` in `.env` (or any free port) to avoid the conflict. The backend always connects internally through `db:3306`, whatever the host mapping is.
@@ -169,7 +175,9 @@ Protected routes need the header `Authorization: Bearer <JWT>`.
 | `GET` | `/api/health` | No | API and database health check |
 | `POST` | `/api/auth/register` | No | Register a new account (no email verification), set the initial `last_login_at`, and return a JWT |
 | `POST` | `/api/auth/login` | No | Authenticate, update `last_login_at`, and return a JWT |
-| `POST` | `/api/auth/reset-password` | No | Reset the password with `{ email, newPassword }` (self-contained, no SMTP) |
+| `POST` | `/api/auth/forgot-password` | No | Request a single-use 15-minute reset token for an email (delivers via SMTP to Mailpit, returns 404 if not found) |
+| `POST` | `/api/auth/reset-password` | No | Verify token hash and set new password (`{ token, newPassword }`) |
+| `PUT` | `/api/auth/change-password` | Yes | Authenticated password update (`{ currentPassword, newPassword }`) |
 | `GET` | `/api/auth/me` | Yes | Get the current user's profile |
 
 ### Habits

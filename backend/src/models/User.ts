@@ -16,11 +16,21 @@ export class User extends Model<InferAttributes<User>, InferCreationAttributes<U
   declare email: string;
   declare password_hash: string;
   declare last_login_at: Date | null;
+  declare reset_password_token_hash: CreationOptional<string | null>;
+  declare reset_password_expires_at: CreationOptional<Date | null>;
   declare created_at: CreationOptional<Date>;
   declare updated_at: CreationOptional<Date>;
 
   declare habits?: NonAttribute<Habit[]>;
   declare goals?: NonAttribute<Goal[]>;
+
+  override toJSON(): Record<string, unknown> {
+    const values = { ...this.get() } as Record<string, unknown>;
+    delete values.password_hash;
+    delete values.reset_password_token_hash;
+    delete values.reset_password_expires_at;
+    return values;
+  }
 }
 
 User.init(
@@ -44,6 +54,14 @@ User.init(
       allowNull: false,
     },
     last_login_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    reset_password_token_hash: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+    },
+    reset_password_expires_at: {
       type: DataTypes.DATE,
       allowNull: true,
     },

@@ -28,13 +28,18 @@ export const errorHandler = (
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       success: false,
+      message: err.message,
       error: { message: err.message, details: err.details },
     });
     return;
   }
 
   if (isJsonParseError(err)) {
-    res.status(400).json({ success: false, error: { message: 'Malformed JSON request body' } });
+    res.status(400).json({
+      success: false,
+      message: 'Malformed JSON request body',
+      error: { message: 'Malformed JSON request body' },
+    });
     return;
   }
 

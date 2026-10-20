@@ -21,6 +21,13 @@ export interface AppEnv {
     expiresIn: NonNullable<SignOptions['expiresIn']>;
   };
   corsOrigins: string[];
+  smtp: {
+    host: string;
+    port: number;
+    from: string;
+  };
+  frontendUrl: string;
+  mailpitUiUrl: string;
 }
 
 const nodeEnv = process.env.NODE_ENV || 'development';
@@ -52,4 +59,11 @@ export const env: AppEnv = {
   corsOrigins: [
     ...new Set([...parseOrigins(process.env.CORS_ORIGIN || ''), localFrontendOrigin]),
   ],
+  smtp: {
+    host: process.env.SMTP_HOST || '127.0.0.1',
+    port: Number(process.env.SMTP_PORT || 1025),
+    from: process.env.SMTP_FROM || 'Habit Shaper <no-reply@habitshaper.local>',
+  },
+  frontendUrl: process.env.FRONTEND_URL || localFrontendOrigin,
+  mailpitUiUrl: process.env.MAILPIT_UI_URL || `http://localhost:${process.env.MAILPIT_UI_PORT || 8025}`,
 };

@@ -8,27 +8,29 @@
 ## 2. High-Level Architecture
 
 ```text
-+-----------------------------------------------------------------------+
-|                            Docker Network                             |
-|                                                                       |
-|  +--------------------+     /api/*      +--------------------------+  |
-|  |  Frontend (Nginx)  | --------------> |  Backend (Node/Express)  |  |
-|  |  React + Tailwind  |                 |  TypeScript + Sequelize  |  |
-|  |  Port: 3000 -> 80  |                 |  Auto-runs Migrations    |  |
-|  +--------------------+                 +------------+-------------+  |
-|                                                      |                |
-|                                                      | TCP 3306       |
-|                                                      v                |
-|                                         +--------------------------+  |
-|                                         |   Database (MySQL 8.0)   |  |
-|                                         |   UUID Primary Keys      |  |
-|                                         +--------------------------+  |
-+-----------------------------------------------------------------------+
++-----------------------------------------------------------------------------------+
+|                                  Docker Network                                   |
+|                                                                                   |
+|  +--------------------+        /api/*         +--------------------------+        |
+|  |  Frontend (Nginx)  | --------------------> |  Backend (Node/Express)  |        |
+|  |  React + Tailwind  |                       |  TypeScript + Sequelize  |        |
+|  |  Port: 3000 -> 80  |                       |  Auto-runs Migrations    |        |
+|  +--------------------+                       +-------------+------------+        |
+|                                                             |                     |
+|                                           +-----------------+------------------+  |
+|                                           | TCP 3306        | SMTP 1025        |  |
+|                                           v                 v                  |  |
+|                              +--------------------------+  +-----------------+ |  |
+|                              |   Database (MySQL 8.0)   |  |     Mailpit     | |  |
+|                              |   UUID Primary Keys      |  |  Webmail: 8025  | |  |
+|                              +--------------------------+  +-----------------+ |  |
++-----------------------------------------------------------------------------------+
 ```
 
 - **Frontend Container:** Multi-stage Docker build compiling React + TypeScript via Vite, served by lightweight Nginx. Nginx proxies `/api/*` requests to `http://backend:4000/api/*`.
 - **Backend Container:** Node.js + Express + TypeScript service using **Sequelize ORM**. On container startup, an entrypoint command runs `npx sequelize-cli db:migrate` to bootstrap the schema automatically before launching the API server.
 - **Database Container:** MySQL 8.0 with a readiness `healthcheck` so the backend only runs migrations once MySQL is ready to accept connections.
+- **Mailpit Container:** Local mock SMTP server and webmail UI (`axllent/mailpit`) capturing password reset emails on port 1025 and providing an interactive webmail inbox at `http://localhost:8025`.
 
 ---
 
@@ -42,6 +44,8 @@ All tables use `UUID` (`CHAR(36)`, UUIDv4) as their primary key (`id`).
    - `email`: STRING(150), NOT NULL, UNIQUE
    - `password_hash`: STRING(255), NOT NULL
    - `last_login_at`: DATE (DATETIME), NULLABLE
+   - `reset_password_token_hash`: STRING(64), NULLABLE, INDEXED
+   - `reset_password_expires_at`: DATE, NULLABLE
    - `created_at`, `updated_at`: TIMESTAMPS
 
 2. **`habits`**
@@ -78,8 +82,10 @@ All tables use `UUID` (`CHAR(36)`, UUIDv4) as their primary key (`id`).
 ### Authentication
 - `POST /api/auth/register` — Register a new user account without email verification, set initial `last_login_at`, and return JWT.
 - `POST /api/auth/login` — Authenticate existing user, update `last_login_at`, and return JWT.
+- `POST /api/auth/forgot-password` — Request a single-use 15-minute password reset token for an email. Returns 404 Not Found if email does not exist ("Email address not found. Please check your email or register a new account."). If user exists, generates token, logs raw token to backend console, and delivers an out-of-band email via SMTP to Mailpit (http://localhost:8025) containing the reset token and a direct link.
+- `POST /api/auth/reset-password` — Verify single-use SHA-256 hashed token (`{ token, newPassword }`), update password hash, and invalidate token.
+- `PUT /api/auth/change-password` — Authenticated password update (`{ currentPassword, newPassword }`) requiring current password verification and JWT auth.
 - `GET /api/auth/me` — Get current logged-in user profile.
-- `POST /api/auth/reset-password` — Reset user password directly by email and new password (self-contained flow requiring no external email/SMTP server).
 
 ### Habits (`build` & `break`)
 - `GET /api/habits` — List all user habits enriched with calculated metrics:
@@ -116,12 +122,13 @@ Following the requirement for a **lightweight, simple, and clean** interface, th
 - `api/` — Axios instance configured with base URL (`/api`) and automatic JWT `Authorization: Bearer <token>` request interceptor.
 - `context/` — `AuthContext.tsx` managing user session state, login/register actions, and token persistence in `localStorage`.
 - `components/`
-  - `Navbar.tsx` — Responsive top navigation bar displaying app branding, logged-in user profile, and logout button.
+  - `Navbar.tsx` — Responsive top navigation bar displaying app branding, logged-in user profile, Change Password trigger, and logout button.
+  - `ChangePasswordModal.tsx` — Modal dialog enabling authenticated users to update their password with current password verification.
   - `HabitBuildCard.tsx` — Renders a positive habit with a one-tap daily check-in button, current streak badge, 7-day visual mini-calendar indicator, weekly completion rate (%), and missed days count.
   - `HabitBreakCard.tsx` — Renders a negative habit with a prominent "Day X Clean" counter, last reset date, and a "Relapse / Reset Streak" action button with a confirmation safeguard.
   - `GoalSection.tsx` — Lists goals linked to habits with visual progress bars (`current_streak / target_streak_days`), achievement badges, and responsive Add/Edit/Delete modals.
 - `pages/`
-  - `AuthPage.tsx` — Clean, centered Login & Registration card adaptable across mobile and desktop screens (email & password, no email verification).
+  - `AuthPage.tsx` — Clean, centered Login, Registration, and OWASP-compliant 2-step token-verified Password Reset card (request token with sandbox preview & copy helper, then verify token and set new password).
   - `DashboardPage.tsx` — Main responsive workspace organized into three clear views/sections: **Habits to Build**, **Habits to Break**, and **Goals**.
 
 ---

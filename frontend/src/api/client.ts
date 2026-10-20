@@ -28,7 +28,7 @@ api.interceptors.request.use((config) => {
 });
 
 // Clear the session when the server rejects our token.
-const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/reset-password'];
+const PUBLIC_AUTH_PATHS = ['/auth/login', '/auth/register', '/auth/reset-password', '/auth/forgot-password'];
 
 api.interceptors.response.use(
   (response) => response,
@@ -63,6 +63,9 @@ export const getErrorMessage = (error: unknown): string => {
       return Object.values(details).join(' • ');
     }
     if (body?.error?.message) return body.error.message;
+    if (typeof (body as unknown as Record<string, unknown>)?.message === 'string') {
+      return (body as unknown as Record<string, unknown>).message as string;
+    }
     return `Request failed (${error.response.status})`;
   }
   return error instanceof Error ? error.message : 'Something went wrong';

@@ -2,7 +2,9 @@ import { api, unwrap } from './client';
 import type {
   ApiSuccess,
   AuthResponse,
+  ChangePasswordPayload,
   CreateHabitPayload,
+  ForgotPasswordResponse,
   Goal,
   GoalPayload,
   Habit,
@@ -20,8 +22,12 @@ export const authApi = {
   login: (payload: LoginPayload) =>
     unwrap(api.post<ApiSuccess<AuthResponse>>('/auth/login', payload)),
   me: () => unwrap(api.get<ApiSuccess<User>>('/auth/me')),
-  resetPassword: (email: string, newPassword: string) =>
-    unwrap(api.post<ApiSuccess<MessageResponse>>('/auth/reset-password', { email, newPassword })),
+  forgotPassword: (email: string) =>
+    unwrap(api.post<ApiSuccess<ForgotPasswordResponse>>('/auth/forgot-password', { email })),
+  resetPassword: (token: string, newPassword: string) =>
+    unwrap(api.post<ApiSuccess<MessageResponse>>('/auth/reset-password', { token, newPassword })),
+  changePassword: (payload: ChangePasswordPayload) =>
+    unwrap(api.put<ApiSuccess<MessageResponse>>('/auth/change-password', payload)),
 };
 
 export const habitsApi = {

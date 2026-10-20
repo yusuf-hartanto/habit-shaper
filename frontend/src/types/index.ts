@@ -20,6 +20,20 @@ export interface MessageResponse {
   message: string;
 }
 
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
 /** One day in the rolling 7-day window (UTC `YYYY-MM-DD`). */
 export interface DayStatus {
   date: string;

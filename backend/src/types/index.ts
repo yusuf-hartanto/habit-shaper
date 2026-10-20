@@ -30,8 +30,21 @@ export interface AuthResponse {
   user: UserProfile;
 }
 
-export interface ResetPasswordPayload {
+export interface ForgotPasswordPayload {
   email: string;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  newPassword: string;
+}
+
+export interface ChangePasswordPayload {
+  currentPassword: string;
   newPassword: string;
 }
 
@@ -47,6 +60,7 @@ export interface ApiSuccess<T> {
 
 export interface ApiError {
   success: false;
+  message?: string;
   error: {
     message: string;
     details?: Record<string, string>;

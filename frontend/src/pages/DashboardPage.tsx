@@ -241,7 +241,7 @@ export function DashboardPage() {
 
   return (
     <div className="min-h-dvh">
-      <Navbar />
+      <Navbar onChangePasswordSuccess={(msg) => notify('success', msg)} />
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         <div className="animate-fade-in">
